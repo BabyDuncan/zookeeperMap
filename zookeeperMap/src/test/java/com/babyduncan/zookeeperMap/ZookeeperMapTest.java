@@ -31,8 +31,12 @@ public class ZookeeperMapTest {
         ZookeeperMap<String> zkMap = ZookeeperMap.createRigidZookeeperMap(zookeeperClient, "/babyduncan", byteArrayToString);
 
         for (int i = 0; i < 30; i++) {
-            System.out.println(zkMap.delegate());
-            Thread.sleep(1000);
+            try {
+                System.out.println(zkMap.delegate());
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                continue;
+            }
         }
     }
 }
