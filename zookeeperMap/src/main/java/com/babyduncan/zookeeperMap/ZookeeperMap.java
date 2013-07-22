@@ -99,9 +99,19 @@ public final class ZookeeperMap<V> extends ForwardingMap<String, V> {
         }
     }
 
+    @Override
+    public V get(Object key) {
+        if (!isLocalcacheUsableWhenConnectionBroken && isConnectionBroken) {
+            throw new IllegalStateException("zookeeper is down !");
+        }
+        return super.get(key);
+    }
 
     @Override
     protected Map<String, V> delegate() {
+        if (!isLocalcacheUsableWhenConnectionBroken && isConnectionBroken) {
+            throw new IllegalStateException("zookeeper is down !");
+        }
         return localcache;
     }
 
@@ -200,6 +210,7 @@ public final class ZookeeperMap<V> extends ForwardingMap<String, V> {
 
 
     private void getDataFromZookeeperServer() {
+        logger.info("get data from zookeeper!!");
         synchronized (lock) {
             if (reRegisterWatchers) {
                 return;
