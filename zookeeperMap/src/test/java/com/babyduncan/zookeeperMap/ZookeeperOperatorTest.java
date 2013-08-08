@@ -19,12 +19,15 @@ public class ZookeeperOperatorTest {
 
         ZookeeperClient zookeeperClient = new ZookeeperClient("localhost:2181", 6000, null, null);
 
-        ZookeeperMap<String> zkMap = ZookeeperMap.createZookeeperMap(zookeeperClient, "/babyduncan", byteArrayToString);
-        ZookeeperOperator<String> zkOpe = new ZookeeperOperator<String>(zookeeperClient, "/babyduncan", stringToByteArray, true);
+        ZookeeperMap<String> zkMap = ZookeeperMap.createRigidZookeeperMap(zookeeperClient, "/babyduncan", byteArrayToString);
+        ZookeeperOperator<String> zkOpe = new ZookeeperOperator<String>(zookeeperClient, "/babyduncan", stringToByteArray, false);
 
         System.out.println(zkMap.delegate());
-        zkOpe.put("ddd", "www");
+        zkOpe.put("foo1", "bar1");
+        zkOpe.remove("foo");
         Thread.sleep(5000);
+        System.out.println(zkMap.delegate());
+        Thread.sleep(20000);
         System.out.println(zkMap.delegate());
 
     }
