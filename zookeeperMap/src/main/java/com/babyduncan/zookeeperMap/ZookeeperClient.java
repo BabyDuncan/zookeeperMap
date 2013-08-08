@@ -44,6 +44,14 @@ public class ZookeeperClient {
 
     private final String zookeeperPassword;
 
+    public String getZookeeperUser() {
+        return zookeeperUser;
+    }
+
+    public String getZookeeperPassword() {
+        return zookeeperPassword;
+    }
+
 
     public ZookeeperClient(String zkConnect, int sessionTimeout, String zookeeperUser, String zookeeperPassword) {
 
