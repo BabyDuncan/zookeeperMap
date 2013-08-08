@@ -128,7 +128,7 @@ public class ZookeeperOperator<V> {
         return false;
     }
 
-    public static List<ACL> createACL(String user, String password) throws NoSuchAlgorithmException {
+    private List<ACL> createACL(String user, String password) throws NoSuchAlgorithmException {
         if (user != null && password != null) {
             String digest = DigestAuthenticationProvider.generateDigest(user + ":" + password);
             ACL all = new ACL(ZooDefs.Perms.ALL, new Id("digest", digest));
