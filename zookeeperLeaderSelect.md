@@ -3,7 +3,7 @@
 假设当前集群有5个实例,对应的id分别为1,2,3,4,5.他们的都没有原始数据,那么leader的选举过程是这样的:
     
     1,server1 启动,发现2,3,4,5 都连不上,他选举自己为leader,但是没有超过半数的同志响应,所以他继续寻找leader.
-    2,server2 启动,发现1可以连上,他选举自己为leader,并通知server1,server1的id没有server2大,此二人苟同,选举server为
+    2,server2 启动,发现1可以连上,他选举自己为leader,并通知server1,server1的id没有server2大,此二人苟同,选举server2为
     leader,但是还是没有超过半数的同志支持,所以,暂定server2为leader,继续寻找新leader.
     3,server3 启动,发现1,2可以连上,server选举自己为leader,并通知1,2,由于此时server3的id最大,所以1,2同意server3为
     leader,此时3人同意server3为leader,超过半数,所以定为server3 为leader,不再寻找新leader,1,2 主动变身为follower.
