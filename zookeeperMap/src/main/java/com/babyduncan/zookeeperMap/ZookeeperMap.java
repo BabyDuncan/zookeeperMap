@@ -12,10 +12,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -46,7 +43,10 @@ public final class ZookeeperMap<V> extends ForwardingMap<String, V> {
 
     private final byte[] lock = new byte[0];
 
-    public ZookeeperMap(ZookeeperClient zookeeperClient, String nodePath, Function<byte[], V> decoder, boolean localcacheUsableWhenConnectionBroken) {
+    private final Map<Watcher.Event.EventType, Watcher> externalWatchers;
+
+
+    public ZookeeperMap(ZookeeperClient zookeeperClient, String nodePath, Function<byte[], V> decoder, boolean localcacheUsableWhenConnectionBroken, Map<Watcher.Event.EventType, Watcher> externalWatchers) {
 
         // do some validate
         Preconditions.checkNotNull(nodePath);
@@ -57,10 +57,20 @@ public final class ZookeeperMap<V> extends ForwardingMap<String, V> {
         this.decoder = decoder;
         this.isLocalcacheUsableWhenConnectionBroken = localcacheUsableWhenConnectionBroken;
         this.zookeeperClient = zookeeperClient;
+        if (externalWatchers == null) {
+            externalWatchers = new HashMap<Watcher.Event.EventType, Watcher>();
+        }
+        this.externalWatchers = externalWatchers;
     }
 
     public static <V> ZookeeperMap<V> createZookeeperMap(ZookeeperClient zookeeperClient, String nodePath, Function<byte[], V> decoder) {
-        ZookeeperMap<V> zookeeperMap = new ZookeeperMap<V>(zookeeperClient, nodePath, decoder, true);
+        ZookeeperMap<V> zookeeperMap = new ZookeeperMap<V>(zookeeperClient, nodePath, decoder, true, null);
+        zookeeperMap.init();
+        return zookeeperMap;
+    }
+
+    public static <V> ZookeeperMap<V> createZookeeperMap(ZookeeperClient zookeeperClient, String nodePath, Function<byte[], V> decoder, Map<Watcher.Event.EventType, Watcher> externalWatchers) {
+        ZookeeperMap<V> zookeeperMap = new ZookeeperMap<V>(zookeeperClient, nodePath, decoder, true, externalWatchers);
         zookeeperMap.init();
         return zookeeperMap;
     }
@@ -75,7 +85,13 @@ public final class ZookeeperMap<V> extends ForwardingMap<String, V> {
      * @return
      */
     public static <V> ZookeeperMap<V> createRigidZookeeperMap(ZookeeperClient zookeeperClient, String nodePath, Function<byte[], V> decoder) {
-        ZookeeperMap<V> zookeeperMap = new ZookeeperMap<V>(zookeeperClient, nodePath, decoder, false);
+        ZookeeperMap<V> zookeeperMap = new ZookeeperMap<V>(zookeeperClient, nodePath, decoder, false, null);
+        zookeeperMap.init();
+        return zookeeperMap;
+    }
+
+    public static <V> ZookeeperMap<V> createRigidZookeeperMap(ZookeeperClient zookeeperClient, String nodePath, Function<byte[], V> decoder, Map<Watcher.Event.EventType, Watcher> externalWatchers) {
+        ZookeeperMap<V> zookeeperMap = new ZookeeperMap<V>(zookeeperClient, nodePath, decoder, false, externalWatchers);
         zookeeperMap.init();
         return zookeeperMap;
     }
@@ -108,7 +124,7 @@ public final class ZookeeperMap<V> extends ForwardingMap<String, V> {
     }
 
     @Override
-    protected Map<String, V> delegate() {
+    public Map<String, V> delegate() {
         if (!isLocalcacheUsableWhenConnectionBroken && isConnectionBroken) {
             throw new IllegalStateException("zookeeper is down !");
         }
@@ -169,6 +185,18 @@ public final class ZookeeperMap<V> extends ForwardingMap<String, V> {
                 if (watchedEvent.getType() == Event.EventType.NodeChildrenChanged) {
                     try {
                         updateChildren();
+                        synchronized (externalWatchers) {
+                            for (Watcher.Event.EventType key : externalWatchers.keySet()) {
+                                if (key.equals(Event.EventType.NodeChildrenChanged))
+                                    try {
+                                        Watcher watcher = externalWatchers.get(key);
+                                        logger.info("Process event:" + watchedEvent + " watcher:" + watcher);
+                                        watcher.process(watchedEvent);
+                                    } catch (Exception e) {
+                                        logger.error("Watcher.process error. event:" + watchedEvent, e);
+                                    }
+                            }
+                        }
                     } catch (InterruptedException e) {
                         logger.error(e.getMessage(), e);
                         Thread.currentThread().interrupt();
@@ -196,6 +224,18 @@ public final class ZookeeperMap<V> extends ForwardingMap<String, V> {
                 if (watchedEvent.getType() == Event.EventType.NodeDataChanged) {
                     try {
                         addChild(child);
+                        synchronized (externalWatchers) {
+                            for (Watcher.Event.EventType key : externalWatchers.keySet()) {
+                                if (key.equals(Event.EventType.NodeDataChanged))
+                                    try {
+                                        Watcher watcher = externalWatchers.get(key);
+                                        logger.info("Process event:" + watchedEvent + " watcher:" + watcher);
+                                        watcher.process(watchedEvent);
+                                    } catch (Exception e) {
+                                        logger.error("Watcher.process error. event:" + watchedEvent, e);
+                                    }
+                            }
+                        }
                     } catch (InterruptedException e) {
                         logger.error(e.getMessage(), e);
                         Thread.currentThread().interrupt();
